@@ -201,10 +201,26 @@ const getConfig = async (req, res) => {
 // ──────────────────────────────────────────────
 const deleteStudent = async (req, res) => {
   const { id } = req.params;
+  const studentId = parseInt(id);
   try {
-    await prisma.student.delete({ where: { id: parseInt(id) } });
+    // Bog'liq jadvallarni ketma-ket o'chirish (FK RESTRICT tufayli)
+    await prisma.$transaction(async (tx) => {
+      // 1. TestAnswer → TestSession
+      const session = await tx.testSession.findFirst({ where: { studentId } });
+      if (session) {
+        await tx.testAnswer.deleteMany({ where: { testSessionId: session.id } });
+        await tx.testSession.delete({ where: { id: session.id } });
+      }
+      // 2. TypingAttempt
+      await tx.typingAttempt.deleteMany({ where: { studentId } });
+      // 3. DocsSubmission
+      await tx.docsSubmission.deleteMany({ where: { studentId } });
+      // 4. Student
+      await tx.student.delete({ where: { id: studentId } });
+    });
     res.json({ success: true });
   } catch (err) {
+    console.error('Delete student error:', err);
     res.status(500).json({ error: 'Server xatosi' });
   }
 };

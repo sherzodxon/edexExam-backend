@@ -97,12 +97,15 @@ const startTest = async (req, res) => {
       take: 20,
     });
 
-    // upsert — ikki marta chaqirilsa ham xato bermaydi
-    const session = await prisma.testSession.upsert({
+    // findFirst + create pattern — upsert muammosini hal qiladi
+    let session = await prisma.testSession.findFirst({
       where: { studentId: student.id },
-      update: {},  // mavjud bo'lsa o'zgartirmaymiz
-      create: { studentId: student.id },
     });
+    if (!session) {
+      session = await prisma.testSession.create({
+        data: { studentId: student.id },
+      });
+    }
 
     const timeLimitSec = config?.testTimeLimitSec || 1200;
 
