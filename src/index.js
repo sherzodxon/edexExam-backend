@@ -8,9 +8,9 @@ const prisma = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-
+const option = [process.env.FRONTEND_URL,"localhost:3000"]
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: option || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'x-admin-key'],
 }));
