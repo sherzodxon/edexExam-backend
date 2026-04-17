@@ -70,6 +70,9 @@ model TypingAttempt {
   @@index([studentId])
 }
 
+// ─────────────────────────────────────────────
+// EXAM CONFIG — admin paneldan boshqariladi
+// ─────────────────────────────────────────────
 model ExamConfig {
   id               Int      @id @default(autoincrement())
   testTimeLimitSec Int      @default(1200) // 20 daqiqa
@@ -79,10 +82,14 @@ model ExamConfig {
   updatedAt        DateTime @updatedAt
 }
 
+// ─────────────────────────────────────────────
+// TEST QUESTION — admin yaratgan savollar
+// ─────────────────────────────────────────────
 model TestQuestion {
   id           Int      @id @default(autoincrement())
   grade        Int      // Qaysi sinf uchun (5, 6, 7...11 yoki 0 = hammasi)
   questionText String   @db.Text
+  imageUrl     String?  @db.VarChar(500) // ixtiyoriy rasm (null bo'lishi mumkin)
   optionA      String   @db.VarChar(500)
   optionB      String   @db.VarChar(500)
   optionC      String   @db.VarChar(500)

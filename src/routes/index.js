@@ -11,7 +11,7 @@ const { submitAttempt } = require('../controllers/typing');
 const { startTest, getQuestions, submitTest } = require('../controllers/test');
 const { uploadDoc, getDocsStatus, downloadStudentDoc } = require('../controllers/docs');
 const {
-  getResults, getLeaderboard, createQuestion,
+  getResults, getLeaderboard, createQuestion, uploadQuestionImage,
   getQuestions: adminGetQuestions, deleteQuestion,
   updateConfig, getConfig, deleteStudent, exportExcel,
 } = require('../controllers/admin');
@@ -20,11 +20,33 @@ const {
 const uploadDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
+// Savollar uchun rasm papkasi
+const questionImgDir = path.join(__dirname, '../../uploads/questions');
+if (!fs.existsSync(questionImgDir)) fs.mkdirSync(questionImgDir, { recursive: true });
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+
+// Rasm yuklash uchun multer (jpg/png/gif/webp, max 5MB)
+const imageStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, questionImgDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `q_${Date.now()}${ext}`);
+  },
+});
+const uploadImage = multer({
+  storage: imageStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    allowed.includes(ext) ? cb(null, true) : cb(new Error('Faqat rasm fayllari qabul qilinadi'));
   },
 });
 
@@ -39,7 +61,9 @@ const upload = multer({
   },
 });
 
-
+// ──────────────────────────────────────────────
+// PUBLIC ROUTES
+// ──────────────────────────────────────────────
 
 // Talaba
 router.post('/auth/register', register);
@@ -63,7 +87,9 @@ router.get('/admin/docs/:studentId/download', adminAuth, downloadStudentDoc);
 // Leaderboard (public)
 router.get('/leaderboard', getLeaderboard);
 
-
+// ──────────────────────────────────────────────
+// ADMIN ROUTES
+// ──────────────────────────────────────────────
 router.get('/admin/results', adminAuth, getResults);
 router.delete('/admin/students/:id', adminAuth, deleteStudent);
 router.get('/admin/export', adminAuth, exportExcel);
@@ -71,6 +97,7 @@ router.get('/admin/export', adminAuth, exportExcel);
 // Savollar
 router.get('/admin/questions', adminAuth, adminGetQuestions);
 router.post('/admin/questions', adminAuth, createQuestion);
+router.post('/admin/questions/:id/image', adminAuth, uploadImage.single('image'), uploadQuestionImage);
 router.delete('/admin/questions/:id', adminAuth, deleteQuestion);
 
 // Config
@@ -78,4 +105,3 @@ router.get('/admin/config', adminAuth, getConfig);
 router.put('/admin/config', adminAuth, updateConfig);
 
 module.exports = router;
- 

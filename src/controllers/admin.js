@@ -88,14 +88,13 @@ const getLeaderboard = async (req, res) => {
 // Test savol yaratish
 // ──────────────────────────────────────────────
 const createQuestion = async (req, res) => {
-  const { grade, questionText, optionA, optionB, optionC, optionD, correctOption, orderIndex } = req.body;
+  const { grade, questionText, optionA, optionB, optionC, optionD, correctOption, orderIndex, imageUrl } = req.body;
 
   if (!questionText || !optionA || !optionB || !optionC || !optionD || !correctOption) {
-    return res.status(400).json({ error: 'Barcha maydonlar to\'ldirilishi shart' });
+    return res.status(400).json({ error: "Barcha maydonlar to'ldirilishi shart" });
   }
-
   if (!['A', 'B', 'C', 'D'].includes(correctOption)) {
-    return res.status(400).json({ error: 'To\'g\'ri javob A, B, C yoki D bo\'lishi kerak' });
+    return res.status(400).json({ error: "To'g'ri javob A, B, C yoki D bo'lishi kerak" });
   }
 
   try {
@@ -103,18 +102,41 @@ const createQuestion = async (req, res) => {
       data: {
         grade: parseInt(grade) || 0,
         questionText,
-        optionA,
-        optionB,
-        optionC,
-        optionD,
+        imageUrl: imageUrl || null,
+        optionA, optionB, optionC, optionD,
         correctOption,
         orderIndex: parseInt(orderIndex) || 0,
       },
     });
-
     res.status(201).json({ success: true, data: question });
   } catch (err) {
     console.error('Create question error:', err);
+    res.status(500).json({ error: 'Server xatosi' });
+  }
+};
+
+// ──────────────────────────────────────────────
+// Savol rasmi yuklash (multer orqali)
+// ──────────────────────────────────────────────
+const uploadQuestionImage = async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Rasm yuklanmadi' });
+  const { id } = req.params;
+
+  try {
+    // /uploads/questions/filename.ext ko'rinishida saqlash
+    const imageUrl = `/uploads/questions/${req.file.filename}`;
+
+    // Agar mavjud savol uchun bo'lsa — bazada yangilaymiz
+    if (id && id !== 'new') {
+      await prisma.testQuestion.update({
+        where: { id: parseInt(id) },
+        data: { imageUrl },
+      });
+    }
+
+    res.json({ success: true, imageUrl });
+  } catch (err) {
+    console.error('Upload question image error:', err);
     res.status(500).json({ error: 'Server xatosi' });
   }
 };
@@ -156,6 +178,12 @@ const deleteQuestion = async (req, res) => {
 
 // ──────────────────────────────────────────────
 // Exam config (taymer, mezon) yangilash
+// docsCriteria formati:
+// {
+//   "group_5_6":  { "baholash_mezonlari": [...] },
+//   "group_7_8":  { "baholash_mezonlari": [...] },
+//   "group_9_11": { "baholash_mezonlari": [...] }
+// }
 // ──────────────────────────────────────────────
 const updateConfig = async (req, res) => {
   const { testTimeLimitSec, docsTimeLimitSec, docsCriteria } = req.body;
@@ -167,8 +195,9 @@ const updateConfig = async (req, res) => {
     if (testTimeLimitSec !== undefined) data.testTimeLimitSec = parseInt(testTimeLimitSec);
     if (docsTimeLimitSec !== undefined) data.docsTimeLimitSec = parseInt(docsTimeLimitSec);
     if (docsCriteria !== undefined) {
-      // criteria - array yoki string bo'lishi mumkin
-      data.docsCriteria = typeof docsCriteria === 'string' ? docsCriteria : JSON.stringify(docsCriteria);
+      data.docsCriteria = typeof docsCriteria === 'string'
+        ? docsCriteria
+        : JSON.stringify(docsCriteria);
     }
 
     if (config) {
@@ -298,4 +327,4 @@ function statusLabel(status) {
   return labels[status] || status;
 }
 
-module.exports = { getResults, getLeaderboard, createQuestion, getQuestions, deleteQuestion, updateConfig, getConfig, deleteStudent, exportExcel };
+module.exports = { getResults, getLeaderboard, createQuestion, uploadQuestionImage, getQuestions, deleteQuestion, updateConfig, getConfig, deleteStudent, exportExcel };
